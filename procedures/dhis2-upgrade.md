@@ -80,7 +80,14 @@ Now that the server tools have built a empty, clean dhis2 container, we must pus
 Push your host backup copy back into the newly recreated container structure:
 ```bash
 # Push your backup copy back into the new container
-sudo lxc file push -r ~/dhis2-migration-backups/opt/ dhis/
+#dhis.conf
+sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/dhis.conf dhis/opt/dhis2/
+
+#files
+sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/files dhis/opt/dhis2/
+
+#logs
+sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/logs dhis/opt/dhis2/
 
 ```
 
