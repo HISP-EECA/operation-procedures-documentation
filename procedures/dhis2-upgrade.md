@@ -53,8 +53,12 @@ Modifying the version tag tells the script that on the next run, recreate enviro
    # BEFORE:
    dhis dhis_version=2.41
 
+   dhis2_auto_upgrade=false
+
    # AFTER:
    dhis dhis_version=2.42
+
+   dhis2_auto_upgrade=true
    ```
 
 4. Save changes and exit (`Ctrl + O`, then `Enter`, then `Ctrl + X`).
