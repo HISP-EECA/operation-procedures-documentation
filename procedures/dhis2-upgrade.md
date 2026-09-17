@@ -95,7 +95,9 @@ sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/files dhis/opt/dhis2/
 sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/logs dhis/opt/dhis2/
 
 # Enter the container to give file ownership back to the new Tomcat 10 user
-sudo lxc exec dhis -- chown -R tomcat:tomcat /opt/dhis
+sudo lxc exec dhis -- chown -R tomcat:tomcat /opt/dhis2
+
+sudo lxc exec dhis -- reboot
 
 ```
 
