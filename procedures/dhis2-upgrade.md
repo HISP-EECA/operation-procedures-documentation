@@ -84,6 +84,7 @@ Now that the server tools have built a empty, clean dhis2 container, we must pus
 Push your host backup copy back into the newly recreated container structure:
 ```bash
 # Push your backup copy back into the new container
+
 #dhis.conf
 sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/dhis.conf dhis/opt/dhis2/
 
@@ -92,6 +93,9 @@ sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/files dhis/opt/dhis2/
 
 #logs
 sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/logs dhis/opt/dhis2/
+
+# Enter the container to give file ownership back to the new Tomcat 10 user
+sudo lxc exec dhis -- chown -R tomcat:tomcat /opt/dhis
 
 ```
 
