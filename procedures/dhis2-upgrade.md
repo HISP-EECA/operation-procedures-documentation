@@ -18,15 +18,23 @@ This document contains the step-by-step instructions to safely migrate and upgra
 
 ### Strategic Container Allocation Profiles (Resource Distribution Blueprint)
 To prevent one container from starving the host memory pool and crashing other elements, the available 64GB to 96GB host allocation pool should be hard-coded into separate, isolated LXD container boundary rings using the properties layout below:
+### Recomended distribution layout
 
-| Container | Current Allocation | New Allocation | Justification |
+| Container | Current Allocation | Reuired Allocation | Justification |
 | :--- | :--- | :--- | :--- |
 | **tb** | 18GB | 32GB | Plenty of headroom to handle large historical case evaluations. |
 | **dev** | 5 GB | 12GB | Meeting the Tomcat 10 minimum standard and additional amout in case of intensive testing operations. |
-| **gpc-integration-tb** | 3GB | 4GB | Optimized to provide more space for working without any bottleneck. |
-| **gpc-integration-dev** | 2GB | 3GB | Optimized to provide more space for working without any bottleneck. |
+| **gcp-integration-tb** | 3GB | 4GB | Optimized to provide more space for working without any bottleneck. |
+| **gcp-integration-dev** | 2GB | 3GB | Optimized to provide more space for working without any bottleneck. |
 | **posgres (dev db)** | 2GB | 8GB | Ensures the database can cache indexes and run parallel sort operations in memory. |
 | **Host System Overhead** | 2GB | 5GB | Retained for the physical OS kernel, the network bridges, and the proxy/munin containers.
+
+### Live Production Infrastructure Distribution (Distributed Layout)
+
+| Server Node Tier | Reuired RAM | Target Internal Tuning Configurations |
+| :--- | :--- | :--- |
+| **Production Webapps** | **48 GB to 64 GB** | Allocates a 32 GB Java Virtual Machine Heap (-Xmx32g) to process large analytics queries without timeout drops. |
+| **Production Database** | **64 GB** | Enables up to 24 GB of shared_buffers cache memory to lock the primary data index registry entirely into RAM. |
 ---
 
 ## How to Audit Live Resource Allocation and Infrastructure Budgets
