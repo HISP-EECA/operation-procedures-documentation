@@ -18,23 +18,32 @@ This document contains the step-by-step instructions to safely migrate and upgra
 
 ### Strategic Container Allocation Profiles (Resource Distribution Blueprint)
 To prevent one container from starving the host memory pool and crashing other elements, the available 64GB to 96GB host allocation pool should be hard-coded into separate, isolated LXD container boundary rings using the properties layout below:
-### Recomended distribution layout
 
-| Container | Current Allocation | Required Allocation | Justification |
+### Recommended Distribution Layout (Testing & Staging Server)
+
+The local LXD host needs to be scaled up significantly. Because tb handles the full production-sized workload for testing, it acts as both the database and the web application layer simultaneously. Splitting tb into its functional layers right away makes its resource needs clear.
+
+| Container / Layer | Current Allocation | Required Allocation | Justification |
 | :--- | :--- | :--- | :--- |
-| **tb** | 18GB | **48 GB to 64 GB**  | Plenty of headroom to handle large historical case evaluations. |
-| **dev** | 5 GB | 12GB | Meeting the Tomcat 10 minimum standard and additional amout in case of intensive testing operations. |
-| **gcp-integration-tb** | 3GB | 4GB | Optimized to provide more space for working without any bottleneck. |
-| **gcp-integration-dev** | 2GB | 3GB | Optimized to provide more space for working without any bottleneck. |
-| **posgres (dev db)** | 2GB | 8GB | Ensures the database can cache indexes and run parallel sort operations in memory. |
-| **Host System Overhead** | 2GB | 5GB | Retained for the physical OS kernel, the network bridges, and the proxy/munin containers.
+| **tb (Web Application Layer)** | 18 GB (Shared) | **32 GB to 48 GB** | Dedicates a robust 24 GB to 32 GB Java heap to handle massive, concurrent user and analytics processing actions. |
+| **tb (Database Layer)** | 18 GB (Shared) | **64 GB** | Allocates up to 24 GB of PostgreSQL shared buffers to hold the complete mirror of their 28,000 cases entirely in memory. |
+| **dev (Upgraded App)** | 5 GB | **32 GB** | Provides a premium high-tier envelope to safely test the new Tomcat 10 / Java 17 framework under intensive testing operations. |
+| **gcp-integration-tb** | 3 GB | **4 GB** | Optimized to provide more space for working without any integration pipeline bottlenecks. |
+| **gcp-integration-dev** | 2 GB | **3 GB** | Optimized to provide more space for working without any integration pipeline bottlenecks. |
+| **postgres (dev db)** | 2 GB | **8 GB** | Ensures the development database can cache indexes and run parallel sort operations entirely in memory. |
+| **Host System Overhead** | 2 GB | **8 GB** | Expanded to safely support the physical OS kernel, network routing bridges, and the default proxy/munin layers under high load. |
+
+---
 
 ### Live Production Infrastructure Distribution (Distributed Layout)
 
-| Server Node Tier | Reuired RAM | Target Internal Tuning Configurations |
+For the actual live, distributed production environment, a 48 GB allocation for the Webapps tier is the absolute sweet spot for their active caseload and analytics structure. While 32 GB works under standard loads, it can choke when multiple users pull complex reporting arrays simultaneously. Stepping up to 48 GB allows you to assign a large 32 GB heap directly to Java, leaving a safe 16 GB cushion for the underlying Linux OS to handle heavy network socket routing, connection pool processing, and system tasks without crashing.
+
+| Server Node Tier | Required RAM | Target Internal Tuning Configurations |
 | :--- | :--- | :--- |
-| **Production Webapps** | **48 GB to 64 GB** | Allocates a 32 GB Java Virtual Machine Heap (-Xmx32g) to process large analytics queries without timeout drops. |
+| **Production Webapps** | **48 GB** | Allocates a 32 GB Java Virtual Machine Heap (-Xmx32g) to process large analytics queries without timeout drops, leaving 16 GB for OS overhead. |
 | **Production Database** | **64 GB** | Enables up to 24 GB of shared_buffers cache memory to lock the primary data index registry entirely into RAM. |
+
 ---
 
 ## How to Audit Live Resource Allocation and Infrastructure Budgets
