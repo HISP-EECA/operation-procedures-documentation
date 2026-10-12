@@ -37,8 +37,6 @@ The local LXD host needs to be scaled up significantly. Because tb handles the f
 
 ### Live Production Infrastructure Distribution (Distributed Layout)
 
-For the actual live, distributed production environment, a 48 GB allocation for the Webapps tier is the absolute sweet spot for their active caseload and analytics structure. While 32 GB works under standard loads, it can choke when multiple users pull complex reporting arrays simultaneously. Stepping up to 48 GB allows you to assign a large 32 GB heap directly to Java, leaving a safe 16 GB cushion for the underlying Linux OS to handle heavy network socket routing, connection pool processing, and system tasks without crashing.
-
 | Server Node Tier | Required RAM | Target Internal Tuning Configurations |
 | :--- | :--- | :--- |
 | **Production Webapps** | **48 GB** | Allocates a 32 GB Java Virtual Machine Heap (-Xmx32g) to process large analytics queries without timeout drops, leaving 16 GB for OS overhead. |
