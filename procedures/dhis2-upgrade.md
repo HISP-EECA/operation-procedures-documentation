@@ -10,7 +10,7 @@ This document contains the step-by-step instructions to safely migrate and upgra
 
 ### Recommended Hardware
 
-| Component | Required | Optimal | Justification |
+| Component | Minimun | Required | Justification |
 | :--- | :--- | :--- | :--- |
 | **CPU Cores** | 32 Cores | **64 Cores** (vCPUs) | Heavy parallel processing required for resource-intensive DHIS2 analytics tables generation and high-volume background data sync loops. |
 | **System Memory** | 32 GB RAM | **64 GB to 96 GB RAM** | Prevents system crashes. Under full utilization, DHIS2, the PostgreSQL cache layer, and multiple isolated environment containers easily overflow a 32GB hardware limit. |
