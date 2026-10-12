@@ -26,8 +26,8 @@ The local LXD host needs to be scaled up significantly. Because tb handles the f
 | Container / Layer | Current Allocation | Required Allocation | Justification |
 | :--- | :--- | :--- | :--- |
 | **tb (Web Application Layer)** | 18 GB (Shared) | **32 GB to 48 GB** | Dedicates a robust 24 GB to 32 GB Java heap to handle massive, concurrent user and analytics processing actions. |
-| **tb (Database Layer)** | 18 GB (Shared) | **64 GB** | Allocates up to 24 GB of PostgreSQL shared buffers to hold the complete mirror of their 28,000 cases entirely in memory. |
-| **dev (Upgraded App)** | 5 GB | **32 GB** | Provides a premium high-tier envelope to safely test the new Tomcat 10 / Java 17 framework under intensive testing operations. |
+| **tb (Database Layer)** | 18 GB (Shared) | **64 GB** | Allocates up to 24 GB of PostgreSQL shared buffers to hold the complete mirror entirely in memory. |
+| **dev (Upgraded App)** | 5 GB | **32 GB** | Meeting the Tomcat 10 minimum standard and additional amout in case of intensive testing operations. |
 | **gcp-integration-tb** | 3 GB | **4 GB** | Optimized to provide more space for working without any integration pipeline bottlenecks. |
 | **gcp-integration-dev** | 2 GB | **3 GB** | Optimized to provide more space for working without any integration pipeline bottlenecks. |
 | **postgres (dev db)** | 2 GB | **8 GB** | Ensures the development database can cache indexes and run parallel sort operations entirely in memory. |
