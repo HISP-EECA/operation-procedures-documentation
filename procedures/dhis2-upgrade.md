@@ -20,7 +20,7 @@ This document contains the step-by-step instructions to safely migrate and upgra
 To prevent one container from starving the host memory pool and crashing other elements, the available 64GB to 96GB host allocation pool should be hard-coded into separate, isolated LXD container boundary rings using the properties layout below:
 ### Recomended distribution layout
 
-| Container | Current Allocation | Reuired Allocation | Justification |
+| Container | Current Allocation | Required Allocation | Justification |
 | :--- | :--- | :--- | :--- |
 | **tb** | 18GB | **48 GB to 64 GB**  | Plenty of headroom to handle large historical case evaluations. |
 | **dev** | 5 GB | 12GB | Meeting the Tomcat 10 minimum standard and additional amout in case of intensive testing operations. |
