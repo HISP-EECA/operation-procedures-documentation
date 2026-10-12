@@ -22,7 +22,7 @@ To prevent one container from starving the host memory pool and crashing other e
 
 | Container | Current Allocation | Reuired Allocation | Justification |
 | :--- | :--- | :--- | :--- |
-| **tb** | 18GB | 32GB | Plenty of headroom to handle large historical case evaluations. |
+| **tb** | 18GB | **48 GB to 64 GB**  | Plenty of headroom to handle large historical case evaluations. |
 | **dev** | 5 GB | 12GB | Meeting the Tomcat 10 minimum standard and additional amout in case of intensive testing operations. |
 | **gcp-integration-tb** | 3GB | 4GB | Optimized to provide more space for working without any bottleneck. |
 | **gcp-integration-dev** | 2GB | 3GB | Optimized to provide more space for working without any bottleneck. |
