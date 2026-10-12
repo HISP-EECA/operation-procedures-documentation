@@ -19,10 +19,14 @@ This document contains the step-by-step instructions to safely migrate and upgra
 ### Strategic Container Allocation Profiles (Resource Distribution Blueprint)
 To prevent one container from starving the host memory pool and crashing other elements, the available 64GB to 96GB host allocation pool should be hard-coded into separate, isolated LXD container boundary rings using the properties layout below:
 
-*   **postgres Container Allocation:** 32 GB to 48 GB RAM dedicated explicitly to the PostgreSQL buffer pool (shared_buffers set to roughly 25% to 40% of its available container limit). This completely isolates database execution threads and guarantees analytics tables compile entirely in memory instead of caching slowly to disk.
-*   **dev / tb App Container Allocations:** 12 GB to 16 GB RAM per instance, configuring the Tomcat 10 Java Virtual Machine maximum memory heap flags (-Xmx) inside the environment variables profile to a safe boundary of 8GB to 12GB. This provides the Java execution layer enough memory room to process heavy analytics arrays without crashing.
-*   **proxy / munin Core Management Layers:** 2 GB to 4 GB RAM total, ensuring lightweight routing stability.
-
+| Container | Current Allocation | New Allocation | Justification |
+| :--- | :--- | :--- | :--- |
+| **tb** | 18GB | 32GB | Plenty of headroom to handle large historical case evaluations. |
+| **dev** | 5 GB | 12GB | Meeting the Tomcat 10 minimum standard and additional amout in case of intensive testing operations. |
+| **gpc-integration-tb** | 3GB | 4GB | Optimized to provide more space for working without any bottleneck. |
+| **gpc-integration-dev** | 2GB | 3GB | Optimized to provide more space for working without any bottleneck. |
+| **posgres (dev db)** | 2GB | 8GB | Ensures the database can cache indexes and run parallel sort operations in memory. |
+| **Host System Overhead** | 2GB | 5GB | Retained for the physical OS kernel, the network bridges, and the proxy/munin containers.
 ---
 
 ## How to Audit Live Resource Allocation and Infrastructure Budgets
