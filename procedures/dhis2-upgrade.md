@@ -10,11 +10,11 @@ This document contains the step-by-step instructions to safely migrate and upgra
 
 ### Recommended Hardware
 
-| Component | Minimum Requirement | Recommended (Production Sizing) | Justification |
+| Component | Required | Optimal | Justification |
 | :--- | :--- | :--- | :--- |
-| **CPU Cores** | 16 Cores | **32 Cores** (vCPUs) | Heavy parallel processing required for resource-intensive DHIS2 analytics tables generation and high-volume background data sync loops. |
+| **CPU Cores** | 32 Cores | **32 Cores** (vCPUs) | Heavy parallel processing required for resource-intensive DHIS2 analytics tables generation and high-volume background data sync loops. |
 | **System Memory** | 32 GB RAM | **64 GB to 96 GB RAM** | Prevents system crashes. Under full utilization, DHIS2, the PostgreSQL cache layer, and multiple isolated environment containers easily overflow a 32GB hardware limit. |
-| **Storage Capacity** | 250 GB SSD | **500 GB to 1 TB Enterprise NVMe SSD** | Database I/O is the primary bottleneck. Fast read/write performance speeds up database queries, logs tracking, and custom application file store structures. |
+| **Storage Capacity** | 200 GB SSD | **500 GB to 1 TB Enterprise NVMe SSD** | Database I/O is the primary bottleneck. Fast read/write performance speeds up database queries, logs tracking, and custom application file store structures. |
 
 ### Strategic Container Allocation Profiles (Resource Distribution Blueprint)
 To prevent one container from starving the host memory pool and crashing other elements, the available 64GB to 96GB host allocation pool should be hard-coded into separate, isolated LXD container boundary rings using the properties layout below:
