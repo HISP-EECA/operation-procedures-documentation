@@ -133,7 +133,7 @@ sudo lxc network show lxdbr1
 ### 3. Discover Active Container Instance Names
 To verify the exact labels assigned to the application container layers (ensuring you target dev and freeze tb correctly), execute:
 ```bash
-sudo lxc list -c n,status,ipv4
+sudo lxc list -c n,status,4
 ```
 *   **What to look for:** Copy down the exact text listed in the NAME column for your development instance (dev) and your testing/production instance (tb). These labels must match your [instances] block headers identically.
 
