@@ -99,7 +99,7 @@ cd /path/to/discovered/dhis2-server-tools/deploy
 If the search command returns no output, the original setup was likely handled remotely or deleted. Pull down a fresh copy of the framework to manage the local environment:
 ```bash
 # Clone the repository onto your local host space
-git clone git@github.com:dhis2/dhis2-server-tools.git
+git clone https://github.com/dhis2/dhis2-server-tools.git
 cd dhis2-server-tools/deploy
 
 # Generate a clean inventory file from the repository blueprint template
