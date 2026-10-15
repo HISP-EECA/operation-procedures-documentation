@@ -28,8 +28,8 @@ The local LXD host needs to be scaled up significantly. Because tb handles the f
 | **tb (Web Application Layer)** | 18 GB (Shared) | **32 GB to 48 GB** | Dedicates a robust 24 GB to 32 GB Java heap to handle massive, concurrent user and analytics processing actions. |
 | **tb (Database Layer)** | 18 GB (Shared) | **64 GB** | Allocates up to 24 GB of PostgreSQL shared buffers to hold the complete mirror entirely in memory. |
 | **dev (Upgraded App)** | 5 GB | **32 GB** | Meeting the Tomcat 10 minimum standard and additional amout in case of intensive testing operations. |
-| **gpc-integration-tb** | 3 GB | **4 GB** | Optimized to provide more space for working without any integration pipeline bottlenecks. |
-| **gpc-integration-dev** | 2 GB | **3 GB** | Optimized to provide more space for working without any integration pipeline bottlenecks. |
+| **gcp-integration-tb** | 3 GB | **4 GB** | Optimized to provide more space for working without any integration pipeline bottlenecks. |
+| **gcp-integration-dev** | 2 GB | **3 GB** | Optimized to provide more space for working without any integration pipeline bottlenecks. |
 | **postgres (dev db)** | 2 GB | **8 GB** | Ensures the development database can cache indexes and run parallel sort operations entirely in memory. |
 | **Host System Overhead** | 2 GB | **8 GB** | Expanded to safely support the physical OS kernel, network routing bridges, and the default proxy/munin layers under high load. |
 
@@ -226,8 +226,6 @@ sudo lxc file pull postgres/tmp/dhis2_pre_upgrade.dump ~/dhis2-migration-backups
 
 ---
 
----
-
 ## Phase 2: Modify Version Target
 
 Modifying the version tag tells the script that on the next execution, it must wipe out the outdated instance framework and allocate the new infrastructure context.
@@ -257,20 +255,15 @@ Modifying the version tag tells the script that on the next execution, it must w
 
 ## Phase 3: Automated Container Recreation
 
-Run the automated orchestrator playbook. You must pass the custom filter plugins location path variable and attach the `--limit=dev` runtime modifier flag. This strictly locks Ansible down to the dev container namespace and guarantees your production systems remain untouched.
+Run the automated orchestrator playbook in check mode. You must pass the custom filter plugins location path variable and attach the `--limit=dev` runtime modifier flag. This strictly locks Ansible down to the dev container namespace and guarantees your production systems remain untouched.
 
 ```bash
 #Dry run
 sudo ANSIBLE_FILTER_PLUGINS=filter_plugins ansible-playbook -i inventory/hosts dhis2.yml --limit=dev -e "force_recreate=true" --check
 
-#Applying changes
-sudo ANSIBLE_FILTER_PLUGINS=filter_plugins ansible-playbook -i inventory/hosts dhis2.yml --limit=dev -e "force_recreate=true"
-
 ```
-*Wait for the playbook execution to finish completely with zero error blocks.*
 
-
-In case releases.json fails
+In case releases.json  error, we manually download the file, and try dry run again.
 ```bash
 
 mkdir -p ~/dhis2-server-tools/deploy/roles/create-instance/vars
@@ -279,12 +272,9 @@ curl -s https://releases.dhis2.org/v1/versions/stable.json -o ~/dhis2-server-too
 
 nano ~/dhis2-server-tools/deploy/roles/create-instance/tasks/dhis2-releases.yml
 ```
-Comment
-```bash
-nano ~/dhis2-server-tools/deploy/roles/create-instance/tasks/dhis2-releases.yml
-```
-   ```text
-
+Comment this block to skip the file automatic download:
+```text
+# 
 # - name: Download dhis2 releases.json file
 #   get_url:
 #     url: "{{ dhis2_releases_json_url }}"
@@ -293,15 +283,14 @@ nano ~/dhis2-server-tools/deploy/roles/create-instance/tasks/dhis2-releases.yml
 #   run_once: true
 ```
 
-In case deploy-war.yml error
+In case deploy-war.yml error, We wipe the content of the file replacing it, and try dry run again.
 
 
-Edidt with nano and replace the content
-
+Edit file:
 ```bash
 sudo nano ~/dhis2-server-tools/deploy/roles/create-instance/tasks/deploy-war.yml
 ``` 
-
+New deploy-war.yml content:
 ```text
 ---
 - name: Check current DHIS2 version
@@ -420,12 +409,14 @@ sudo nano ~/dhis2-server-tools/deploy/roles/create-instance/tasks/deploy-war.yml
   ansible.builtin.meta: flush_handlers
 
 ``` 
+In case glowroot.yml error, We wipe the content of the file replacing it, and try dry run again.
 
-In case glowroot.yml error
-
+Edit file:
 ```bash
 sudo nano /home/ardgzc/dhis2-server-tools/deploy/roles/create-instance/tasks/glowroot.yml
 ```
+
+New glowroot.yml content:
 ```text
 ---
 - name: Get latest glowroot release info
@@ -466,16 +457,6 @@ sudo nano /home/ardgzc/dhis2-server-tools/deploy/roles/create-instance/tasks/glo
       "https://github.com/glowroot/glowroot/releases/download/{{ glowroot_latest_version }}/glowroot-{{ glowroot_latest_version | regex_replace('^v', '') }}-dist.zip"
   when: glowroot_needs_update
 
-# No longer deletes /opt/glowroot first - data/ is a separate mounted
-# volume nested under it (see migrate-dhis2-data.yml), and a recursive
-# delete here doesn't stop at mount boundaries, so it would wipe the
-# volume's actual contents, not just clean up old binaries. unarchive
-# overlays the new distribution's files without needing the destination
-# empty first (verified: keep_newer defaults to false, so it overwrites
-# existing files unconditionally); data/ was never part of the downloaded
-# zip, so it's untouched either way. Files from a prior version that
-# aren't in the new zip are left behind as harmless clutter - a real
-# tradeoff, but a far smaller one than the alternative.
 - name: Extract glowroot
   ansible.builtin.unarchive:
     src: /tmp/glowroot-dist.zip
@@ -549,19 +530,46 @@ sudo nano /home/ardgzc/dhis2-server-tools/deploy/roles/create-instance/tasks/glo
 
 ```
 
+One the dry run finished with no errors we can proceed to apply the changes 
+```bash
+
+#Applying changes
+sudo ANSIBLE_FILTER_PLUGINS=filter_plugins ansible-playbook -i inventory/hosts dhis2.yml --limit=dev -e "force_recreate=true"
+
+```
+*Wait for the playbook execution to finish completely with zero error blocks.*
+
+
+Once the playbook execution its done with no error, we need to download and deplot glowroot on the container:
+```bash
+1. Stop the broken Tomcat process loop
+sudo lxc exec dev -- systemctl stop tomcat10
+
+# 2. Create the missing destination directory footprint
+sudo lxc exec dev -- mkdir -p /opt/glowroot
+
+# 3. Download the official Glowroot release bundle directly into the container
+sudo lxc exec dev -- wget https://github.com -O /tmp/glowroot.zip
+
+# 4. Install unzip inside your new container and extract the files straight to /opt/
+sudo lxc exec dev -- apt update
+sudo lxc exec dev -- apt install unzip -y
+sudo lxc exec dev -- unzip -o /tmp/glowroot.zip -d /opt/
+
+# 5. Fix permissions so the tomcat system engine has full read/write rights
+sudo lxc exec dev -- chown -R tomcat:tomcat /opt/glowroot
+sudo lxc exec dev -- chmod -R 755 /opt/glowroot
+
+# 6. Clean up the temporary archive download file
+sudo lxc exec dev -- rm /tmp/glowroot.zip
+``
 ---
 
 ## Phase 4: Restore Environment
 
 Now that the server tools have automatically built an empty, clean container base, you must push your original opt configurations and user data assets back inside while preventing an accidental downgrade of the software engines.
 
-### 1. Clean Up the Old Core Executables Before Transfer
-To ensure you do not copy your old 2.41 web archives over the newly installed 2.42 Tomcat 10 files, wipe the old war file from the local backup directory:
-```bash
-sudo rm -rf ~/dhis2-migration-backups/opt/dhis2/tomcat/webapps/*
-```
-
-### 2. Restore System Files to the Proper Path
+### 1. Restore System Files to the Proper Path
 Push your configuration files and user-uploaded data assets back into the new container target:
 ```bash
 # Push your backup data layers back into the container filesystem
@@ -582,8 +590,8 @@ sudo lxc file push -r ~/dhis2-migration-backups/opt/glowroot/ dev/opt/glowroot
 sudo lxc exec dev -- chown -R tomcat:tomcat /opt/dhis2
 sudo lxc exec dev -- chmod -R 755 /opt/dhis2
 
-# Clear the temporary application installation folder to ensure clean custom app loads
-sudo lxc exec dev -- rm -rf /opt/dhis2/apps/*
+#Restart Tomcat
+sudo lxc exec dev -- systemctl restart tomcat10
 ```
 
 ### 3. Verify Database Status
