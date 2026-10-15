@@ -244,8 +244,10 @@ Modifying the version tag tells the script that on the next execution, it must w
 
 3. Locate your dev row under the [instances] section. Confirm it targets the correct upgrade version values and appropriate guest operating system profile:
    ```text
-   dev dhis_version=2.42 guest_os=24.04
+   dev dhis2_version=2.42 guest_os=24.04
 
+   create_db=False
+   
    dhis2_auto_upgrade=true 
    ```
 
@@ -258,6 +260,10 @@ Modifying the version tag tells the script that on the next execution, it must w
 Run the automated orchestrator playbook. You must pass the custom filter plugins location path variable and attach the `--limit=dev` runtime modifier flag. This strictly locks Ansible down to the dev container namespace and guarantees your production systems remain untouched.
 
 ```bash
+#Dry run
+sudo ANSIBLE_FILTER_PLUGINS=filter_plugins ansible-playbook -i inventory/hosts dhis2.yml --limit=dev -e "force_recreate=true" --check
+
+#Applying changes
 sudo ANSIBLE_FILTER_PLUGINS=filter_plugins ansible-playbook -i inventory/hosts dhis2.yml --limit=dev -e "force_recreate=true"
 
 ```
@@ -286,6 +292,263 @@ nano ~/dhis2-server-tools/deploy/roles/create-instance/tasks/dhis2-releases.yml
 #   delegate_to: localhost
 #   run_once: true
 ```
+
+In case deploy-war.yml error
+
+
+Edidt with nano and replace the content
+
+```bash
+sudo nano ~/dhis2-server-tools/deploy/roles/create-instance/tasks/deploy-war.yml
+``` 
+
+```text
+---
+- name: Check current DHIS2 version
+  ansible.builtin.shell: |
+    if [ "{{ force_recreate | default(false) | bool }}" = "true" ]; then
+      echo "0.0.0"
+    elif [ -f /opt/dhis2/tomcat/webapps/{{ inventory_hostname }}/WEB-INF/lib/version.txt ]; then
+      cat /opt/dhis2/tomcat/webapps/{{ inventory_hostname }}/WEB-INF/lib/version.txt | xargs
+    else
+      echo "0.0.0"
+    fi
+  register: version_results
+  failed_when: false
+  changed_when: false
+
+- name: Set sanitized current dhis2 version fact
+  ansible.builtin.set_fact:
+    current_dhis2_version: "{{ version_results.stdout | trim if (version_results.stdout is defined and version_results.stdout | trim | length > 0) else '0.0.0' }}"
+
+- name: Get sha256sum of dhis2.war file
+  ansible.builtin.stat:
+    path: /opt/dhis2/dhis2.war
+    checksum_algorithm: sha256
+  register: dhis2_war_stat
+
+- ansible.builtin.debug:
+    msg:
+      - "Running release: {{ current_dhis2_version }}"
+      - "New release: {{ patchversion_name }}"
+      - set dhis2_auto_upgrade=True in your inventory file to enable automatic upgrade.
+      - Prior to the upgrade, it is important to have a backup of your instance database
+  when:
+    - patchversion_name is defined
+    - "'skipped' not in version_results.stdout | default('')"
+    - current_dhis2_version is version(patchversion_name, '<')
+
+- name: Download dhis2 war file
+  ansible.builtin.command:
+    cmd: wget -q -O /opt/dhis2/dhis2.war "{{ dhis2_url }}"
+  when:
+    - patchversion_name is defined
+    - dhis2_url is defined
+    - "'skipped' in version_results.stdout | default('') or current_dhis2_version is version(patchversion_name, '<') or (force_recreate | default(false) | bool)"
+
+- name: Download dhis2.war with hard coded url
+  ansible.builtin.command:
+    cmd: wget -q --timeout=120 -O /opt/dhis2/dhis2.war "{{ dhis2_war_file }}"
+  when:
+    - dhis2_war_file is defined
+    - (dhis2_war_file | regex_search('^(https?|ftp|file):\/\/')) is not none
+
+- name: Set war file permissions
+  ansible.builtin.file:
+    path: /opt/dhis2/dhis2.war
+    mode: "0640"
+  when: >
+    (patchversion_name is defined and dhis2_url is defined and
+    ('skipped' in version_results.stdout | default('') or current_dhis2_version is version(patchversion_name, '<') or (force_recreate | default(false) | bool)))
+    or (dhis2_war_file is defined and (dhis2_war_file | regex_search('^(https?|ftp|file):\/\/')) is not none)
+
+- name: Copy dhis2.war file from ansible controller
+  ansible.builtin.copy:
+    src: "{{ dhis2_war_file }}"
+    dest: /opt/dhis2/dhis2.war
+    mode: "0640"
+  when:
+    - dhis2_war_file is defined
+    - (dhis2_war_file | regex_search('^(https?|ftp|file):\/\/')) is none
+
+- name: Clean /var/lib/tomcat{{ tomcat_version }}/webapps
+  ansible.builtin.file:
+    path: /var/lib/tomcat{{ tomcat_version }}/webapps/
+    state: absent
+  when: "'skipped' in version_results.stdout | default('') or (patchversion_name is defined and current_dhis2_version is version(patchversion_name, '<')) or (force_recreate | default(false) | bool) or dhis2_war_file is defined"
+
+- name: Creating webapps directories
+  ansible.builtin.file:
+    path: /var/lib/tomcat{{ tomcat_version }}/webapps/{{ dhis2_base_path | default(inventory_hostname) | to_fixed_string }}
+    mode: "0755"
+    state: directory
+  notify: Restart Tomcat
+
+- name: Convert javax to jakartaee
+  ansible.builtin.command:
+    cmd: javax2jakarta /opt/dhis2/dhis2.war /opt/dhis2/jakarta-dhis2.war
+    creates: /opt/dhis2/jakarta-dhis2.war
+  when:
+    - dhis2_war_file is undefined
+    - normalized_dhis2_version is defined and normalized_dhis2_version.dhis2_version_major is version('2.41', '<=')
+    - tomcat_version == "10"
+
+- name: Extracting jakarta-dhis2.war
+  ansible.builtin.unarchive:
+    src: /opt/dhis2/jakarta-dhis2.war
+    dest: /var/lib/tomcat{{ tomcat_version }}/webapps/{{ dhis2_base_path | default(inventory_hostname) | to_fixed_string }}
+    remote_src: true
+  when:
+    - dhis2_war_file is undefined
+    - normalized_dhis2_version is defined and normalized_dhis2_version.dhis2_version_major is version('2.41', '<=')
+    - tomcat_version == '10'
+  notify: Restart Tomcat
+
+- name: Extracting dhis2.war file
+  ansible.builtin.unarchive:
+    src: /opt/dhis2/dhis2.war
+    dest: /var/lib/tomcat{{ tomcat_version }}/webapps/{{ dhis2_base_path | default(inventory_hostname) | to_fixed_string }}
+    remote_src: true
+  when: tomcat_version != '10' or dhis2_war_file is defined and dhis2_war_file or (normalized_dhis2_version is defined and normalized_dhis2_version.dhis2_version_major is version('2.42', '>='))
+  notify: Restart Tomcat
+
+- name: Glowroot app monitoring
+  ansible.builtin.include_tasks: "{{ app_monitoring }}.yml"
+  when: app_monitoring is defined
+
+- name: Flushing handlers
+  ansible.builtin.meta: flush_handlers
+
+``` 
+
+In case glowroot.yml error
+
+```bash
+sudo nano /home/ardgzc/dhis2-server-tools/deploy/roles/create-instance/tasks/glowroot.yml
+```
+```text
+---
+- name: Get latest glowroot release info
+  ansible.builtin.command:
+    cmd: wget -q -O - https://api.github.com/repos/glowroot/glowroot/releases/latest
+  register: glowroot_release_info
+  changed_when: false
+  failed_when: false
+
+- name: Set glowroot latest version
+  ansible.builtin.set_fact:
+    glowroot_latest_version: "{{ ((glowroot_release_info.stdout | trim if glowroot_release_info.stdout | trim | length > 0 else '{}') | from_json).tag_name | default('v0.14.7') }}"
+
+- name: Check if glowroot directory exists
+  ansible.builtin.stat:
+    path: /opt/glowroot
+  register: glowroot_dir
+
+- name: Check installed glowroot version file
+  ansible.builtin.stat:
+    path: /opt/glowroot/.version
+  register: glowroot_version_file
+
+- name: Read installed glowroot version
+  ansible.builtin.slurp:
+    src: /opt/glowroot/.version
+  register: glowroot_installed_version
+  when: glowroot_version_file.stat.exists
+
+- name: Set glowroot needs update fact
+  ansible.builtin.set_fact:
+    glowroot_needs_update: '{{ not glowroot_dir.stat.exists or (glowroot_version_file.stat.exists and (glowroot_installed_version.content | b64decode | trim) != glowroot_latest_version) }}'
+
+- name: Download glowroot zip
+  ansible.builtin.command:
+    cmd: >
+      wget -q -O /tmp/glowroot-dist.zip
+      "https://github.com/glowroot/glowroot/releases/download/{{ glowroot_latest_version }}/glowroot-{{ glowroot_latest_version | regex_replace('^v', '') }}-dist.zip"
+  when: glowroot_needs_update
+
+# No longer deletes /opt/glowroot first - data/ is a separate mounted
+# volume nested under it (see migrate-dhis2-data.yml), and a recursive
+# delete here doesn't stop at mount boundaries, so it would wipe the
+# volume's actual contents, not just clean up old binaries. unarchive
+# overlays the new distribution's files without needing the destination
+# empty first (verified: keep_newer defaults to false, so it overwrites
+# existing files unconditionally); data/ was never part of the downloaded
+# zip, so it's untouched either way. Files from a prior version that
+# aren't in the new zip are left behind as harmless clutter - a real
+# tradeoff, but a far smaller one than the alternative.
+- name: Extract glowroot
+  ansible.builtin.unarchive:
+    src: /tmp/glowroot-dist.zip
+    dest: /opt/
+    owner: root
+    group: tomcat
+    remote_src: true
+    mode: '0770'
+    exclude:
+      - glowroot/lib/glowroot-central-collector-https-osx.jar
+      - glowroot/lib/glowroot-central-collector-https-windows.jar
+  when: glowroot_needs_update
+
+- name: Save installed glowroot version
+  ansible.builtin.copy:
+    content: '{{ glowroot_latest_version }}'
+    dest: /opt/glowroot/.version
+    mode: '0644'
+  when: glowroot_needs_update
+
+- name: Clean up glowroot zip
+  ansible.builtin.file:
+    path: /tmp/glowroot-dist.zip
+    state: absent
+  when: glowroot_needs_update
+
+- name: Find jar files in /opt/glowroot directory
+  ansible.builtin.find:
+    path: '/opt/glowroot/'
+    recurse: true
+    depth: 2
+    patterns:
+      - '*.jar' # search all files ending with .jar
+    excludes:
+      - plugin-pointcuts.jar
+  register: glowroot_jar_files
+
+- name: Change ownership and permissions of found jar files in /opt/glowroot/lib
+  ansible.builtin.file:
+    path: '{{ item.path }}'
+    owner: root
+    group: tomcat
+    mode: '0640'
+  loop: '{{ glowroot_jar_files.files }}'
+  loop_control:
+    label: '{{ item.path }}'
+
+- name: Check if /opt/glowroot/admin.json file exists
+  ansible.builtin.stat:
+    path: /opt/glowroot/admin.json
+  register: glowroot_admin_file_status
+
+- name: Copy glowroot configs to the instances
+  ansible.builtin.template:
+    src: glowroot_admin.json
+    dest: /opt/glowroot/admin.json
+    owner: root
+    group: tomcat
+    mode: '0660'
+  no_log: true
+  when: not glowroot_admin_file_status.stat.exists
+  notify: Restart Tomcat
+
+- name: Configure glowroot basepath
+  ansible.builtin.lineinfile:
+    path: /opt/glowroot/admin.json
+    regexp: '^(.*)"contextPath"'
+    line: '\1"contextPath": "{{ "/glowroot" if dhis2_base_path | default(inventory_hostname) | to_fixed_string == "ROOT" else "/" + dhis2_base_path | default(inventory_hostname) | to_fixed_string + "-glowroot" }}",'
+    backrefs: true
+  notify: Restart Tomcat
+
+```
+
 ---
 
 ## Phase 4: Restore Environment
@@ -304,13 +567,16 @@ Push your configuration files and user-uploaded data assets back into the new co
 # Push your backup data layers back into the container filesystem
 
 #dhis.conf
-sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/dhis.conf dhis/opt/dhis2/
+sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/dhis.conf dev/opt/dhis2/
 
 #files
-sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/files dhis/opt/dhis2/
+sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/files dev/opt/dhis2/
 
 #logs
-sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/logs dhis/opt/dhis2/
+sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/logs dev/opt/dhis2/
+
+sudo lxc file push -r ~/dhis2-migration-backups/opt/glowroot/ dev/opt/glowroot
+
 
 # Force absolute recursive user ownership and permissions over the file maps
 sudo lxc exec dev -- chown -R tomcat:tomcat /opt/dhis2
