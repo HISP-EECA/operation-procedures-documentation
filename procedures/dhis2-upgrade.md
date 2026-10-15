@@ -274,13 +274,17 @@ nano ~/dhis2-server-tools/deploy/roles/create-instance/tasks/dhis2-releases.yml
 ```
 Comment this block to skip the file automatic download:
 ```text
-# 
-# - name: Download dhis2 releases.json file
-#   get_url:
-#     url: "{{ dhis2_releases_json_url }}"
-#     dest: "{{ role_path }}/vars/releases.json"
-#   delegate_to: localhost
-#   run_once: true
+#- name: Download dhis2 releases.json file
+#  delegate_to: localhost
+#  run_once: true
+#  become: false
+#  ansible.builtin.get_url:
+#    url: "https://releases.dhis2.org/v1/versions/stable.json"
+#    dest: "{{ role_path }}/vars/releases.json"
+#    force: true
+#   mode: "0666"  # the file is public, no need to restrict permissions
+#  changed_when: false
+
 ```
 
 In case deploy-war.yml error, We wipe the content of the file replacing it, and try dry run again.
