@@ -549,7 +549,7 @@ sudo lxc exec dev -- systemctl stop tomcat10
 sudo lxc exec dev -- mkdir -p /opt/glowroot
 
 # 3. Download the official Glowroot release bundle directly into the container
-sudo lxc exec dev -- wget https://github.com -O /tmp/glowroot.zip
+sudo lxc exec dev -- wget https://github.com/glowroot/glowroot/releases/download/v0.14.7/glowroot-0.14.7-dist.zip -O /tmp/glowroot.zip
 
 # 4. Install unzip inside your new container and extract the files straight to /opt/
 sudo lxc exec dev -- apt update
