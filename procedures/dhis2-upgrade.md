@@ -302,7 +302,15 @@ sudo rm -rf ~/dhis2-migration-backups/opt/dhis2/tomcat/webapps/*
 Push your configuration files and user-uploaded data assets back into the new container target:
 ```bash
 # Push your backup data layers back into the container filesystem
-sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2 dev/opt/
+sudo lxc file push -r ~/dhis2-migration-backups/opt/ dhis/
+#dhis.conf
+sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/dhis.conf dhis/opt/dhis2/
+
+#files
+sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/files dhis/opt/dhis2/
+
+#logs
+sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/logs dhis/opt/dhis2/
 
 # Force absolute recursive user ownership and permissions over the file maps
 sudo lxc exec dev -- chown -R tomcat:tomcat /opt/dhis2
