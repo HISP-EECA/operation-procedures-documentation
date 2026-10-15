@@ -245,6 +245,8 @@ Modifying the version tag tells the script that on the next execution, it must w
 3. Locate your dev row under the [instances] section. Confirm it targets the correct upgrade version values and appropriate guest operating system profile:
    ```text
    dev dhis_version=2.42 guest_os=24.04
+
+   dhis2_auto_upgrade=true 
    ```
 
 4. Save your file changes and exit the text editor (Ctrl + O, then press Enter, then Ctrl + X).
@@ -256,11 +258,34 @@ Modifying the version tag tells the script that on the next execution, it must w
 Run the automated orchestrator playbook. You must pass the custom filter plugins location path variable and attach the `--limit=dev` runtime modifier flag. This strictly locks Ansible down to the dev container namespace and guarantees your production systems remain untouched.
 
 ```bash
-ANSIBLE_FILTER_PLUGINS=filter_plugins ansible-playbook -i inventory/hosts dhis2.yml --limit=dev -e "force_recreate=true"
+sudo ANSIBLE_FILTER_PLUGINS=filter_plugins ansible-playbook -i inventory/hosts dhis2.yml --limit=dev -e "force_recreate=true"
 
 ```
 *Wait for the playbook execution to finish completely with zero error blocks.*
 
+
+In case releases.json fails
+```bash
+
+mkdir -p ~/dhis2-server-tools/deploy/roles/create-instance/vars
+
+curl -s https://releases.dhis2.org/v1/versions/stable.json -o ~/dhis2-server-tools/deploy/roles/create-instance/vars/releases.json
+
+nano ~/dhis2-server-tools/deploy/roles/create-instance/tasks/dhis2-releases.yml
+```
+Comment
+```bash
+nano ~/dhis2-server-tools/deploy/roles/create-instance/tasks/dhis2-releases.yml
+```
+   ```text
+
+# - name: Download dhis2 releases.json file
+#   get_url:
+#     url: "{{ dhis2_releases_json_url }}"
+#     dest: "{{ role_path }}/vars/releases.json"
+#   delegate_to: localhost
+#   run_once: true
+```
 ---
 
 ## Phase 4: Restore Environment
@@ -270,7 +295,7 @@ Now that the server tools have automatically built an empty, clean container bas
 ### 1. Clean Up the Old Core Executables Before Transfer
 To ensure you do not copy your old 2.41 web archives over the newly installed 2.42 Tomcat 10 files, wipe the old war file from the local backup directory:
 ```bash
-rm -rf ~/dhis2-migration-backups/opt/dhis2/tomcat/webapps/*
+sudo rm -rf ~/dhis2-migration-backups/opt/dhis2/tomcat/webapps/*
 ```
 
 ### 2. Restore System Files to the Proper Path
