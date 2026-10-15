@@ -530,7 +530,7 @@ New glowroot.yml content:
 
 ```
 
-One the dry run finished with no errors we can proceed to apply the changes 
+Once the dry run finished with no errors we can proceed to apply the changes 
 ```bash
 
 #Applying changes
@@ -540,7 +540,7 @@ sudo ANSIBLE_FILTER_PLUGINS=filter_plugins ansible-playbook -i inventory/hosts d
 *Wait for the playbook execution to finish completely with zero error blocks.*
 
 
-Once the playbook execution its done with no error, we need to download and deplot glowroot on the container:
+Once the playbook execution its done with no errors, we need to download and deploy glowroot on the container:
 ```bash
 1. Stop the broken Tomcat process loop
 sudo lxc exec dev -- systemctl stop tomcat10
