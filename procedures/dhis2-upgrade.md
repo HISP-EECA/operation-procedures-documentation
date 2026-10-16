@@ -566,7 +566,8 @@ sudo lxc exec dev -- chmod -R 755 /opt/glowroot
 
 # 6. Clean up the temporary archive download file
 sudo lxc exec dev -- rm /tmp/glowroot.zip
-``
+```
+
 ---
 
 ## Phase 4: Restore Environment
