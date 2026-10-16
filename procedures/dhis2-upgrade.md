@@ -263,7 +263,7 @@ sudo ANSIBLE_FILTER_PLUGINS=filter_plugins ansible-playbook -i inventory/hosts d
 
 ```
 
-In case releases.json  error, we manually download the file, and try dry run again.
+In case releases.json  **vars does not exist error**, we manually download the file, and try dry run again.
 ```bash
 
 mkdir -p ~/dhis2-server-tools/deploy/roles/create-instance/vars
@@ -287,7 +287,7 @@ Comment this block to skip the file automatic download:
 
 ```
 
-In case deploy-war.yml error, We wipe the content of the file replacing it, and try dry run again.
+In case deploy-war.yml **Input version value cannot be empty error**, We wipe the content of the file replacing it, and try dry run again.
 
 
 Edit file:
@@ -413,7 +413,7 @@ New deploy-war.yml content:
   ansible.builtin.meta: flush_handlers
 
 ``` 
-In case glowroot.yml error, We wipe the content of the file replacing it, and try dry run again.
+In case glowroot.yml **Error while resolving value for 'glowroot_latest_version**, We wipe the content of the file replacing it, and try dry run again.
 
 Edit file:
 ```bash
