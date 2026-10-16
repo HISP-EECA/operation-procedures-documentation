@@ -588,8 +588,6 @@ sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/files dev/opt/dhis2/
 #logs
 sudo lxc file push -r ~/dhis2-migration-backups/opt/dhis2/logs dev/opt/dhis2/
 
-sudo lxc file push -r ~/dhis2-migration-backups/opt/glowroot/ dev/opt/glowroot
-
 
 # Force absolute recursive user ownership and permissions over the file maps
 sudo lxc exec dev -- chown -R tomcat:tomcat /opt/dhis2
